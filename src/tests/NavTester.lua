@@ -30,7 +30,10 @@ assert(p.x==0 and p.y==0 and p.z==0 and p.f==Nav.NORTH, "Failed to getPos")
 -- Test those utility functions
 assert(Nav.str(p.x, p.y, p.z)=="0,0,0", "Failed to turn a position into a string")
 assert(Nav.str_f(p.x,p.y,p.z,p.f)=="0,0,0;1", "Failed to turn a position+direction into a string")
-assert(Nav.pos("1,2,3")==)
+do
+    local x, y, z = Nav.pos("1,2,3")
+    assert(x==1 and y==2 and z==3, "Failed to convert string to position")
+end
 
 -- Try setting position
 Nav.setPos(1, 2, 3, Nav.EAST)
