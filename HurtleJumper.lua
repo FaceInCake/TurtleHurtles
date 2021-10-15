@@ -1,7 +1,7 @@
 --                  Name : HurtleJumper
 --                Author : Matthew (FaceInCake) Eppel
 --                  Date : Oct 14, 2021
---               Version : 0.9.0
+--               Version : 1.0.0
 -- ComputerCraft Version : 1.4
 -- Program for more easily installing and using TurtleHurtle programs
 -- Check the README of the repo for how to install the installer
@@ -29,11 +29,12 @@ local function createFolderStructure()
     __createFolder(basedir.."tests")
 end
 
-local baseurl = "https://github.com/FaceInCake/TurtleHurtles/tree/main/src/"
+local baseurl = "https://raw.githubusercontent.com/FaceInCake/TurtleHurtles/main/src/"
 
 -- Function to download AVAILABLE apis/programs
 local function downloadPossible (t, subDir)
-    local res = http.get(baseurl..subDir)
+    local d = "https://github.com/FaceInCake/TurtleHurtles/tree/main/src/"
+    local res = http.get(d..subDir)
     if res == nil then
         print("Failed to download available",subDir,": Couldn't connect")
         return false
@@ -85,6 +86,9 @@ local function refreshPossible ()
     end
     return false
 end
+if not refreshPossible() then
+    print("ERR: Failed to download available APIs/programs")
+end
 
 -- Boolean for continuing or stopping the main loop
 local keepRunning = true
@@ -93,17 +97,17 @@ local keepRunning = true
 local listLUT = {
     ["apis"] = function ()
         for k, _ in pairs(installedAPIs) do
-            print("  >",k)
+            print("    >",k)
         end
     end,
     ["programs"] = function ()
         for k, _ in pairs(installedPrograms) do
-            print("  >",k)
+            print("    >",k)
         end
     end,
     ["tests"] = function ()
         for k, _ in pairs(installedTesters) do
-            print("  >",k)
+            print("    >",k)
         end
     end
 }
@@ -167,7 +171,7 @@ local actLUT = {
             print("Usage: run <programName>")
             return false
         end
-        local argGetter = ar:gmatch("([a-zA-Z0-9_]+) +|$|\n")
+        local argGetter = ar:gmatch(" *([a-zA-Z0-9_]+)")
         local programName = argGetter()
         if installedPrograms[programName] or installedTesters[programName] then
             local ars = {} -- Arguments to be passed to the program
@@ -176,12 +180,11 @@ local actLUT = {
                 ars[arsl+1] = argGetter()
                 arsl = arsl + 1
             until ars[arsl]==nil
-            if shell.run(programName, unpack(ars)) then
-                keepRunning = false
-                return true
+            local path = basedir.."programs/"..programName..".lua"
+            if not fs.exists(path) then
+                path = basedir.."tests/"..programName..".lua"
             end
-            print("ERR: Failed to run that program")
-            return false
+            return shell.run(path, unpack(ars))
         end
         print("ERR: Sorry, I don't recognize that program.")
         return false
@@ -194,7 +197,7 @@ local actLUT = {
 }
 
 local function getInput()
-    local s = io.read():lower()
+    local s = io.read()
     local m = s:find(" ", 4, true)
     if m == nil then return s end
     local a = s:sub(m+1, -1)
@@ -211,7 +214,7 @@ while keepRunning do
     if operation~=nil then
         local action = actLUT[operation]
         if action ~= nil then
-            action(argument)
+            action(arguments)
         end
     end
 end

@@ -31,8 +31,8 @@ assert(p.x==0 and p.y==0 and p.z==0 and p.f==Nav.NORTH, "Failed to getPos")
 assert(Nav.str(p.x, p.y, p.z)=="0,0,0", "Failed to turn a position into a string")
 assert(Nav.str_f(p.x,p.y,p.z,p.f)=="0,0,0;1", "Failed to turn a position+direction into a string")
 do
-    local x, y, z = Nav.pos("1,2,3")
-    assert(x==1 and y==2 and z==3, "Failed to convert string to position")
+    local x, y, z, f = Nav.pos("1,2,3;4")
+    assert(x==1 and y==2 and z==3 and f==4, "Failed to convert string to position")
 end
 
 -- Try setting position
@@ -43,13 +43,13 @@ assert(Nav.getZ()==2, "Failed to set turtle z position")
 assert(Nav.getF()==Nav.EAST, "Failed to set turtle facing direction")
 
 -- Try moving forward
-while not Nav.forward() then
+while not Nav.forward() do
     assert(Nav.getX()==1, "Not moving forward changed position")
 end
 assert(Nav.getX()==2, "Failed to move forward")
 
 -- Try moving backward
-while not Nav.backward() then
+while not Nav.backward() do
     assert(Nav.getX()==2, "Not moving backward changed position")
 end
 assert(Nav.getX()==1, "Failed to move backward")
@@ -96,3 +96,4 @@ Nav.backward()
 Nav.up()
 Nav.down()
 
+print("Succeeded the tests!")
