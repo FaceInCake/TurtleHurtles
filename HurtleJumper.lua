@@ -44,11 +44,11 @@ local function downloadPossible (t, subDir)
         res:close()
         return false
     end
-    local line = res:readLine()
+    local line = res.readLine()
     while line ~= nil do
         local m = line:gmatch(">([a-zA-Z0-9_]+)\.lua<")()
         if m ~= nil then t[m] = subDir end
-        line = res:readLine()
+        line = res.readLine()
     end
     res:close()
     return true
