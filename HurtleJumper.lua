@@ -19,19 +19,6 @@ local branch = "main" -- GitHub branch to pull from, you can change this when te
 local baseUrl = "https://github.com/FaceInCake/TurtleHurtles/tree/"
 local baseRawUrl = "https://raw.githubusercontent.com/FaceInCake/TurtleHurtles/"
 
--- Function for creating folder structure, called when accessing a file fails
-local function __createFolder(path)
-    if not fs.exists(path) then
-        fs.makeDir(path)
-    end
-end
-local function createFolderStructure()
-    __createFolder(basedir)
-    __createFolder(basedir.."/apis")
-    __createFolder(basedir.."/programs")
-    __createFolder(basedir.."/tests")
-end
-
 -- Following two functions build paths, using the given parameters
 local function getLocalDir (type)
     return basedir.."/"..branch.."/"..(type and type.."/" or "")
@@ -90,7 +77,7 @@ local installedTesters = {}
 -- Helper function for loading the api/program list
 local function __getInstalled (listOut, dir)
     if not fs.exists(dir) then
-        createFolderStructure()
+        fs.makeDir(dir)
         return true -- Empty, but still valid
     end
     local l = fs.list(dir)
@@ -194,7 +181,9 @@ local actLUT = {
             print("ERR: Failed to download page:",res:getResponseCode())
             return false
         end
-        local f = fs.open(getLocalDir(type)..ar..".lua", "w")
+        local d = getLocalDir(type)
+        if not fs.exists(d) then fs.makeDir(d) end
+        local f = fs.open(d..ar..".lua", "w")
         if f == nil then
             print("ERR: Failed to create the new file")
             return false
