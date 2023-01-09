@@ -562,7 +562,8 @@ local function seekAndDestroy (tar)
     -- Navigate to any block beside the target block
     local result = navigate(tar)
     if result==false then
-        printError("Failed to navigate to block.")
+        print("Cannot navigate to", tarS)
+        toComeBackTo[tar] = true
         return false
     end
     -- Dig the block using the appropriate function
@@ -605,6 +606,12 @@ local function main ()
     declareWall(0)
     while curTarget.z < area.depth do
         declareWall(curTarget.z+1)
+        -- Retry failed blocks if there are any
+        for k,_ in pairs(toComeBackTo) do
+            if seekAndDestroy(k) then
+                toComeBackTo[k] = nil
+            end
+        end
         while curTarget.x >= 0 and curTarget.x < area.width do
             while curTarget.y >= 0 and curTarget.y < area.height do
                 print("Targeting:", str(curTarget))
@@ -620,6 +627,12 @@ local function main ()
         xStep = - xStep
         curTarget.x = curTarget.x + xStep
         curTarget.z = curTarget.z + 1
+    end
+    -- Retry failed blocks if there are any
+    for k,_ in pairs(toComeBackTo) do
+        if seekAndDestroy(k) then
+            toComeBackTo[k] = nil
+        end
     end
 end
 
