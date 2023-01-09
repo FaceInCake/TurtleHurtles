@@ -72,9 +72,9 @@ end
 
 -- Function for fetching all available APIs/programs/tests
 local function downloadPossible ()
-    if downloadPossible(possible, "apis") then
-        if downloadPossible(possible, "programs") then
-            if downloadPossible(possible, "tests") then
+    if __downloadPossible(possible, "apis") then
+        if __downloadPossible(possible, "programs") then
+            if __downloadPossible(possible, "tests") then
                 return true
             end
         end
@@ -140,11 +140,12 @@ local listLUT = {
 -- LUT for the usage documentation of the given command string. Use the below function
 local usageLUT = {
     ["install"] = "<apiName/programName>",
-    ["list"] = "<'apis'/'programs'/'test'>",
+    ["list"] = "<'apis'/'programs'/'tests'>",
     ["run"] = "<programName>",
     ["available"] = "['apis'/'programs'/'test']",
     ["help"] = "[command]",
-    ["refresh"] = ""
+    ["refresh"] = "",
+    ["branch"] = "<name>"
 }
 -- Function for printing the 'usage' documentation for the given command string
 local function printUsage (cmd)
@@ -161,10 +162,11 @@ local helpLUT = {
     ["help"] = "You're using it right now, you got the hang if it.",
     ["exit"] = "Quits the program, exits, leaves, says goodbye, dies.",
     ["list"] = "Lists all installed files of the given type.",
-    ["run"] = "Executes the given program, runs it, activates, goes, does thing."
+    ["run"] = "Executes the given program, runs it, activates, goes, does thing.",
     ["install"] = "Attempts to install the api/program of the given name",
     ["available"] = "Lists all files that are available online for download of the given type, will list every file if no type is given.",
     ["refresh"] = "Re-fetches all online files available for download."
+    ["branch"] = "Changes the remote branch to fetch from, used if you're developing new code. Default is 'main'."
 }
 
 -- LUT of functions for enacting instructions
@@ -261,13 +263,21 @@ local actLUT = {
         else
             print("Failed to fetch available downloads")
         end
-    end
+    end,
+    ["branch"] = function (ar)
+        if ar ~= nil and ar ~= "" then
+            branch = ar
+            print("Set branch to", ar)
+        else
+            printUsage("branch")
+        end
+    end,
     ["help"] = function (ar)
         if ar == nil then
             printUsage("help")
             print("Available commands:")
             print("[help] [exit] [run] [list] [install]")
-            print("[available] [refresh]")
+            print("[available] [refresh] [branch]")
             print("")
             return true
         end
