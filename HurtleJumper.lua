@@ -10,11 +10,14 @@
 -- Should be able to view available APIs / programs
 -- Should be able to execute installed programs
 
-if keys == nil then -- keys weere introduced in version 1.4
+if keys == nil then -- keys were introduced in version 1.4
     error("You atleast need computercraft version 1.4 for the base installer to work")
 end
 
-local basedir = "TurtleHurtles/"
+local basedir = "TurtleHurtles" -- Local directory to store everything besides this file
+local branch = "main" -- GitHub branch to pull from, you can change this when tesing/debugging
+local baseUrl = "https://github.com/FaceInCake/TurtleHurtles/tree/"
+local baseRawUrl = "https://raw.githubusercontent.com/FaceInCake/TurtleHurtles/"
 
 -- Function for creating folder structure, called when accessing a file fails
 local function __createFolder(path)
@@ -24,17 +27,30 @@ local function __createFolder(path)
 end
 local function createFolderStructure()
     __createFolder(basedir)
-    __createFolder(basedir.."apis")
-    __createFolder(basedir.."programs")
-    __createFolder(basedir.."tests")
+    __createFolder(basedir.."/apis")
+    __createFolder(basedir.."/programs")
+    __createFolder(basedir.."/tests")
 end
 
-local baseurl = "https://raw.githubusercontent.com/FaceInCake/TurtleHurtles/main/src/"
+-- Following two functions build paths, using the given parameters
+local function getLocalDir (type)
+    return basedir.."/"..branch.."/"..(type and type.."/" or "")
+end
+local function getRemoteUrl (type, raw)
+    if raw == true then
+        return baseRawUrl..branch.."/src/"..(type and type.."/" or "")
+    else
+        return baseUrl..branch.."/src/"..(type and type.."/" or "")
+    end
+end
 
--- Function to download AVAILABLE apis/programs
-local function downloadPossible (t, subDir)
-    local d = "https://github.com/FaceInCake/TurtleHurtles/tree/main/src/"
-    local res = http.get(d..subDir)
+-- [name] = [type]
+local possible = {}
+
+-- Helper function to download list of apis/programs that are available from GitHub
+local function __downloadPossible (listOut, subDir)
+    -- TODO: Use Dependencies.txt file
+    local res = http.get(getRemoteUrl(subDir, false))
     if res == nil then
         print("Failed to download available",subDir,": Couldn't connect")
         return false
@@ -47,36 +63,15 @@ local function downloadPossible (t, subDir)
     local line = res.readLine()
     while line ~= nil do
         local m = line:gmatch(">([a-zA-Z0-9_]+)\.lua<")()
-        if m ~= nil then t[m] = subDir end
+        if m ~= nil then listOut[m] = subDir end
         line = res.readLine()
     end
     res:close()
     return true
 end
 
--- Function for loading the api/program list
-local function getList (dir)
-    if not fs.exists(dir) then
-        createFolderStructure()
-    end
-    local l = fs.list(dir)
-    local r = {}
-    for i=1, #l do
-        if l[i]:sub(-4)==".lua" then
-            r[l[i]:sub(1,-5)]=true
-        end
-    end
-    return r
-end
-
--- Attempt to read in the currently installed APIs
-local installedAPIs = getList(basedir.."apis/")
-local installedPrograms = getList(basedir.."programs/")
-local installedTesters = getList(basedir.."tests")
-local possible = {}
-
 -- Function for fetching all available APIs/programs/tests
-local function refreshPossible ()
+local function downloadPossible ()
     if downloadPossible(possible, "apis") then
         if downloadPossible(possible, "programs") then
             if downloadPossible(possible, "tests") then
@@ -86,8 +81,38 @@ local function refreshPossible ()
     end
     return false
 end
-if not refreshPossible() then
-    print("ERR: Failed to download available APIs/programs")
+
+-- [name] => true
+local installedAPIs = {}
+local installedPrograms = {}
+local installedTesters = {}
+
+-- Helper function for loading the api/program list
+local function __getInstalled (listOut, dir)
+    if not fs.exists(dir) then
+        createFolderStructure()
+        return true -- Empty, but still valid
+    end
+    local l = fs.list(dir)
+    for i=1, #l do
+        if l[i]:sub(-4)==".lua" then
+            listOut[l[i]:sub(1,-5)]=true
+        end
+    end
+    return true
+end
+
+-- Function for loading the api/program list
+local function getInstalled ()
+    -- cannot error but just in case `\_('-')_/`
+    if __getInstalled(installedAPIs, getLocalDir("apis")) then
+        if __getInstalled(installedPrograms, getLocalDir("programs")) then
+            if __getInstalled(installedTesters, getLocalDir("tests")) then
+                return true
+            end
+        end
+    end
+    return false
 end
 
 -- Boolean for continuing or stopping the main loop
@@ -97,43 +122,68 @@ local keepRunning = true
 local listLUT = {
     ["apis"] = function ()
         for k, _ in pairs(installedAPIs) do
-            print("    >",k)
+            print(" -",k)
         end
     end,
     ["programs"] = function ()
         for k, _ in pairs(installedPrograms) do
-            print("    >",k)
+            print(" -",k)
         end
     end,
     ["tests"] = function ()
         for k, _ in pairs(installedTesters) do
-            print("    >",k)
+            print(" -",k)
         end
     end
 }
 
-local function getHelp ()
-    print(":= [install] [run] [list] [help] [exit]")
-    return true
+-- LUT for the usage documentation of the given command string. Use the below function
+local usageLUT = {
+    ["install"] = "<apiName/programName>",
+    ["list"] = "<'apis'/'programs'/'test'>",
+    ["run"] = "<programName>",
+    ["available"] = "['apis'/'programs'/'test']",
+    ["help"] = "[command]",
+    ["refresh"] = ""
+}
+-- Function for printing the 'usage' documentation for the given command string
+local function printUsage (cmd)
+    local s = usageLUT[cmd]
+    if s == nil then
+        print("No usage doc found")
+    else
+        print("Usage: "..cmd.." "..s)
+    end
 end
+
+-- LUT for the help message for each command/topic/whatever
+local helpLUT = {
+    ["help"] = "You're using it right now, you got the hang if it.",
+    ["exit"] = "Quits the program, exits, leaves, says goodbye, dies.",
+    ["list"] = "Lists all installed files of the given type.",
+    ["run"] = "Executes the given program, runs it, activates, goes, does thing."
+    ["install"] = "Attempts to install the api/program of the given name",
+    ["available"] = "Lists all files that are available online for download of the given type, will list every file if no type is given.",
+    ["refresh"] = "Re-fetches all online files available for download."
+}
 
 -- LUT of functions for enacting instructions
 local actLUT = {
-    ["install"] = function (arg)
-        if arg==nil then
-            print("Usage: install <apiName/programName>")
+    ["install"] = function (ar)
+        if ar==nil then
+            printUsage("install")
             return false
         end
-        if arg:match("[a-zA-Z0-9_]+")==nil then
+        if ar:match("[a-zA-Z0-9_]+")==nil then
             print("ERR: Please pass a file NAME")
             return false
         end
-        local type = possible[arg]
+        local type = possible[ar]
         if type == nil then
             print("ERR: Sorry I don't see that file")
             return false
         end
-        local res = http.get(baseurl..type.."/"..arg..".lua")
+        local res = http.get(getRemoteUrl(type, true)..ar..".lua")
         if res == nil then
             print("ERR: Failed to connect or something")
             return false
@@ -142,7 +192,7 @@ local actLUT = {
             print("ERR: Failed to download page:",res:getResponseCode())
             return false
         end
-        local f = fs.open(basedir..type.."/"..arg..".lua", "w")
+        local f = fs.open(getLocalDir(type)..ar..".lua", "w")
         if f == nil then
             print("ERR: Failed to create the new file")
             return false
@@ -151,16 +201,18 @@ local actLUT = {
         f:flush()
         f:close()
         res:close()
+        getInstalled()
         return true
     end,
     ["list"] = function (type)
         if type == nil then
-            print("Usage: list <'apis'/'programs'/'tests'>")
+            printUsage("list")
             return false
         end
         local f = listLUT[type]
         if f == nil then
             print("ERR: Options are 'apis', 'programs', or 'tests'")
+            printUsage("list")
             return false
         end
         f()
@@ -168,7 +220,7 @@ local actLUT = {
     end,
     ["run"] = function (ar)
         if ar==nil then
-            print("Usage: run <programName>")
+            printUsage("run")
             return false
         end
         local argGetter = ar:gmatch(" *([a-zA-Z0-9_]+)")
@@ -180,16 +232,51 @@ local actLUT = {
                 ars[arsl+1] = argGetter()
                 arsl = arsl + 1
             until ars[arsl]==nil
-            local path = basedir.."programs/"..programName..".lua"
+            local path = getLocalDir("programs")..programName..".lua"
             if not fs.exists(path) then
-                path = basedir.."tests/"..programName..".lua"
+                path = getLocalDir("tests")..programName..".lua"
             end
             return shell.run(path, unpack(ars))
         end
         print("ERR: Sorry, I don't recognize that program.")
+        printUsage("run")
         return false
     end,
-    ["help"] = getHelp,
+    ["available"] = function (ar)
+        if ar == nil then
+            for k,v in pairs(possible) do
+                print(" -", v, ":", k)
+            end
+        else
+            for k,v in pairs(possible) do
+                if v == ar then
+                    print(" -", k)
+                end
+            end
+        end
+    end,
+    ["refresh"] = function ()
+        if downloadPossible() then
+            print("Successfuly fetched available downloads")
+        else
+            print("Failed to fetch available downloads")
+        end
+    end
+    ["help"] = function (ar)
+        if ar == nil then
+            printUsage("help")
+            print("Available commands:")
+            print("[help] [exit] [run] [list] [install]")
+            print("[available] [refresh]")
+            print("")
+            return true
+        end
+        local s = helpLUT[ar]
+        if s ~= nil then
+            printUsage(ar)
+            print(s)
+        end
+    end,
     ["exit"] = function (_)
         keepRunning = false
         return true
@@ -205,16 +292,23 @@ local function getInput()
     return s, a
 end
 
--- Main Loop
-print("- - = = TurtleHurtles: MainMenu = = - -")
-getHelp() -- You need it, you sick FUGSDHRGI
-while keepRunning do
-    io.write("TH> ")
-    local operation, arguments = getInput()
-    if operation~=nil then
-        local action = actLUT[operation]
-        if action ~= nil then
-            action(arguments)
+local function main ()
+    if not downloadPossible() then
+        print("ERR: Failed to download available APIs/programs")
+    end
+    getInstalled()
+    print("- - = = TurtleHurtles: MainMenu = = - -")
+    while keepRunning do
+        io.write("TH> ")
+        local operation, arguments = getInput()
+        if operation~=nil then
+            local action = actLUT[operation]
+            if action ~= nil then
+                action(arguments)
+            end
         end
     end
 end
+
+-- Time to do it!
+main()
