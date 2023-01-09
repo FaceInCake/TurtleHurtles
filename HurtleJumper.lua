@@ -152,7 +152,7 @@ local helpLUT = {
     ["run"] = "Executes the given program, runs it, activates, goes, does thing.",
     ["install"] = "Attempts to install the api/program of the given name",
     ["available"] = "Lists all files that are available online for download of the given type, will list every file if no type is given.",
-    ["refresh"] = "Re-fetches all online files available for download."
+    ["refresh"] = "Re-fetches all online files available for download.",
     ["branch"] = "Changes the remote branch to fetch from, used if you're developing new code. Default is 'main'."
 }
 
