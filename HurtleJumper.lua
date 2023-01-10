@@ -81,6 +81,7 @@ local function __getInstalled (listOut, dir)
         return true -- Empty, but still valid
     end
     local l = fs.list(dir)
+    listOut = {}
     for i=1, #l do
         if l[i]:sub(-4)==".lua" then
             listOut[l[i]:sub(1,-5)]=true
@@ -256,6 +257,7 @@ local actLUT = {
     ["branch"] = function (ar)
         if ar ~= nil and ar ~= "" then
             branch = ar
+            getInstalled()
             print("Set branch to", ar)
         else
             printUsage("branch")
